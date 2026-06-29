@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>GeoThrones</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,6 +12,7 @@
       background: #1a1a2e;
       color: #e0d5c1;
       height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       user-select: none;
     }
@@ -63,6 +64,7 @@
       display: none;
       position: relative;
       height: 100vh;
+      height: 100dvh;
       width: 100vw;
     }
 
@@ -326,16 +328,18 @@
       }
 
       #submit-btn {
-        bottom: 16px;
+        bottom: env(safe-area-inset-bottom, 16px);
         right: 16px;
         padding: 10px 28px;
         font-size: 0.9rem;
+        margin-bottom: 16px;
       }
 
       #result-overlay {
-        bottom: 16px;
+        bottom: env(safe-area-inset-bottom, 16px);
         padding: 16px 24px;
         min-width: 260px;
+        margin-bottom: 16px;
       }
 
       #result-overlay .result-score {
