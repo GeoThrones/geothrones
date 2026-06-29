@@ -1045,11 +1045,8 @@ function placeMarkerOnMap(pctX, pctY, className, labelText) {
   const wrapper = document.getElementById('map-wrapper');
   const img = document.getElementById('map-img');
 
-  const imgOffsetX = (wrapper.clientWidth - img.clientWidth) / 2;
-  const imgOffsetY = (wrapper.clientHeight - img.clientHeight) / 2;
-
-  const pixelX = imgOffsetX + (pctX / 100) * img.clientWidth;
-  const pixelY = imgOffsetY + (pctY / 100) * img.clientHeight;
+  const pixelX = img.offsetLeft + (pctX / 100) * img.clientWidth;
+  const pixelY = img.offsetTop + (pctY / 100) * img.clientHeight;
 
   const marker = document.createElement('div');
   marker.className = `marker ${className}`;
@@ -1094,10 +1091,8 @@ function submitGuess() {
   const guessPos = { };
   const img = document.getElementById('map-img');
   const wrapper = document.getElementById('map-wrapper');
-  const imgOffsetX = (wrapper.clientWidth - img.clientWidth) / 2;
-  const imgOffsetY = (wrapper.clientHeight - img.clientHeight) / 2;
-  guessPos.x = imgOffsetX + (guessX / 100) * img.clientWidth;
-  guessPos.y = imgOffsetY + (guessY / 100) * img.clientHeight;
+  guessPos.x = img.offsetLeft + (guessX / 100) * img.clientWidth;
+  guessPos.y = img.offsetTop + (guessY / 100) * img.clientHeight;
 
   const ansPos = placeMarkerOnMap(q.x, q.y, 'answer', q.answer);
   drawLine(guessPos.x, guessPos.y, ansPos.x, ansPos.y);
