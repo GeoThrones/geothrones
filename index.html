@@ -858,29 +858,24 @@ function applyTransform() {
 
 function clampPan() {
   const container = document.getElementById('map-container');
-  const cRect = container.getBoundingClientRect();
   const img = document.getElementById('map-img');
+  const cW = container.clientWidth;
+  const cH = container.clientHeight;
+  const imgL = img.offsetLeft;
+  const imgT = img.offsetTop;
   const imgW = img.clientWidth * scale;
   const imgH = img.clientHeight * scale;
+  const scaledL = imgL * scale;
+  const scaledT = imgT * scale;
 
-  const wrapperW = container.clientWidth * scale;
-  const wrapperH = container.clientHeight * scale;
+  // Don't let the image edges pull away from the viewport
+  const minX = Math.min(0, cW - scaledL - imgW);
+  const maxX = Math.max(0, -scaledL);
+  panX = Math.max(minX, Math.min(maxX, panX));
 
-  if (imgW <= cRect.width) {
-    panX = 0;
-  } else {
-    const imgLeft = (container.clientWidth - img.clientWidth) / 2;
-    const minX = -(imgLeft * scale + imgW - cRect.width);
-    const maxX = -imgLeft * scale + (imgLeft * scale);
-    panX = Math.max(Math.min(panX, -imgLeft * (scale - 1)), -(imgLeft * (scale - 1) + (imgW - cRect.width)));
-  }
-
-  if (imgH <= cRect.height) {
-    panY = 0;
-  } else {
-    const imgTop = (container.clientHeight - img.clientHeight) / 2;
-    panY = Math.max(Math.min(panY, -imgTop * (scale - 1)), -(imgTop * (scale - 1) + (imgH - cRect.height)));
-  }
+  const minY = Math.min(0, cH - scaledT - imgH);
+  const maxY = Math.max(0, -scaledT);
+  panY = Math.max(minY, Math.min(maxY, panY));
 }
 
 function zoomAt(newScale, centerX, centerY) {
