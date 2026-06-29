@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoThrones - Calibrate Locations</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Georgia, serif;
+      background: #1a1a2e;
+      color: #e0d5c1;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #top {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 30;
+      background: #111122ee;
+      padding: 16px 24px;
+      text-align: center;
+      border-bottom: 2px solid #c9a84c33;
+    }
+
+    #top h2 {
+      color: #c9a84c;
+      font-size: 1rem;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    #location-name {
+      font-size: 1.4rem;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    #progress {
+      font-size: 0.85rem;
+      color: #8a7a6a;
+    }
+
+    #instructions {
+      font-size: 0.85rem;
+      color: #c9a84c88;
+      margin-top: 6px;
+    }
+
+    #map-area {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      overflow: hidden;
+      cursor: crosshair;
+      background: #0d0d1a;
+    }
+
+    #map-wrapper {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: 0 0;
+    }
+
+    #map-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+    }
+
+    .cal-marker {
+      position: absolute;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #2ecc71;
+      border: 2px solid #fff;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 0 8px rgba(46,204,113,0.6);
+    }
+
+    .cal-label {
+      position: absolute;
+      transform: translate(10px, -50%);
+      color: #2ecc71;
+      font-size: 0.7rem;
+      font-weight: bold;
+      text-shadow: 0 0 4px #000, 0 0 4px #000;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    .pending-marker {
+      background: #e74c3c;
+      box-shadow: 0 0 12px rgba(231,76,60,0.8);
+      width: 16px; height: 16px;
+    }
+
+    #bottom-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 30;
+      background: #111122ee;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 2px solid #c9a84c33;
+    }
+
+    #coords {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: #c9a84c;
+    }
+
+    #bottom-bar .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      font-size: 0.9rem;
+      font-family: Georgia, serif;
+      background: linear-gradient(135deg, #c9a84c, #a8872a);
+      color: #1a1a2e;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    .btn:hover { background: linear-gradient(135deg, #dfc06a, #c9a84c); }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .btn.secondary { background: #333; color: #aaa; }
+    .btn.secondary:hover { background: #444; }
+
+    #output-overlay {
+      display: none;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 50;
+      background: #111122;
+      border: 2px solid #c9a84c;
+      padding: 24px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #output-overlay h3 {
+      color: #c9a84c;
+      margin-bottom: 12px;
+    }
+
+    #output-overlay textarea {
+      width: 100%;
+      min-height: 300px;
+      background: #0d0d1a;
+      color: #2ecc71;
+      border: 1px solid #333;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      resize: vertical;
+    }
+
+    #output-overlay p {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #8a7a6a;
+    }
+
+    #hint {
+      position: absolute;
+      bottom: 60px; left: 16px;
+      z-index: 25;
+      font-size: 0.75rem;
+      color: #c9a84c66;
+      background: #111122aa;
+      padding: 4px 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map-area">
+  <div id="map-wrapper">
+    <img id="map-img" src="map.jpg" alt="Map" draggable="false">
+  </div>
+</div>
+
+<div id="top">
+  <h2>CALIBRATE LOCATIONS</h2>
+  <div id="location-name">Loading...</div>
+  <div id="progress"></div>
+  <div id="instructions">Click on the map where this location should be. Scroll to zoom, drag to pan.</div>
+</div>
+
+<div id="hint">Scroll to zoom &middot; Drag to pan</div>
+
+<div id="bottom-bar">
+  <div id="coords">x: — y: —</div>
+  <div class="btn-group">
+    <button class="btn secondary" onclick="skipLocation()">SKIP</button>
+    <button class="btn" id="confirm-btn" onclick="confirmLocation()" disabled>CONFIRM</button>
+    <button class="btn secondary" onclick="undoLast()">UNDO</button>
+  </div>
+</div>
+
+<div id="output-overlay">
+  <h3>Calibrated Coordinates</h3>
+  <textarea id="output-text" readonly></textarea>
+  <p>Copy this entire block and send it to me. I'll update the game with these exact coordinates.</p>
+  <button class="btn" onclick="document.getElementById('output-overlay').style.display='none'" style="margin-top:12px;">CLOSE</button>
+</div>
+
+<script>
+const LOCATIONS = [
+  "Pentos",
+  "Riverrun",
+  "Dragonstone",
+  "Highgarden",
+  "Sunspear",
+  "The Stepstones",
+  "Rook's Rest",
+  "Driftmark",
+  "Ashford",
+  "Casterly Rock",
+];
+
+let currentIdx = 0;
+let calibrated = {};
+let pendingX = null;
+let pendingY = null;
+
+// Zoom/pan state
+let scale = 1;
+let panX = 0, panY = 0;
+let isPanning = false, didPan = false;
+let panStartX, panStartY, panStartPanX, panStartPanY;
+const MIN_SCALE = 1, MAX_SCALE = 8;
+
+function updateUI() {
+  if (currentIdx >= LOCATIONS.length) {
+    showOutput();
+    return;
+  }
+  document.getElementById('location-name').textContent = LOCATIONS[currentIdx];
+  document.getElementById('progress').textContent = `${currentIdx + 1} of ${LOCATIONS.length} — ${Object.keys(calibrated).length} calibrated`;
+  document.getElementById('confirm-btn').disabled = (pendingX === null);
+  clearPending();
+}
+
+function clearPending() {
+  document.querySelectorAll('.pending-marker').forEach(el => el.remove());
+  pendingX = null;
+  pendingY = null;
+  document.getElementById('confirm-btn').disabled = true;
+  document.getElementById('coords').textContent = 'x: — y: —';
+}
+
+function placePending(pctX, pctY) {
+  clearPending();
+  pendingX = pctX;
+  pendingY = pctY;
+
+  const wrapper = document.getElementById('map-wrapper');
+  const img = document.getElementById('map-img');
+  const offX = (wrapper.clientWidth - img.clientWidth) / 2;
+  const offY = (wrapper.clientHeight - img.clientHeight) / 2;
+  const px = offX + (pctX / 100) * img.clientWidth;
+  const py = offY + (pctY / 100) * img.clientHeight;
+
+  const dot = document.createElement('div');
+  dot.className = 'cal-marker pending-marker';
+  dot.style.left = px + 'px';
+  dot.style.top = py + 'px';
+  wrapper.appendChild(dot);
+
+  document.getElementById('coords').textContent = `x: ${pctX.toFixed(1)}  y: ${pctY.toFixed(1)}`;
+  document.getElementById('confirm-btn').disabled = false;
+}
+
+function confirmLocation() {
+  if (pendingX === null) return;
+  const name = LOCATIONS[currentIdx];
+  calibrated[name] = { x: parseFloat(pendingX.toFixed(1)), y: parseFloat(pendingY.toFixed(1)) };
+
+  // Convert pending to confirmed
+  const wrapper = document.getElementById('map-wrapper');
+  const img = document.getElementById('map-img');
+  const offX = (wrapper.clientWidth - img.clientWidth) / 2;
+  const offY = (wrapper.clientHeight - img.clientHeight) / 2;
+  const px = offX + (pendingX / 100) * img.clientWidth;
+  const py = offY + (pendingY / 100) * img.clientHeight;
+
+  document.querySelectorAll('.pending-marker').forEach(el => el.remove());
+
+  const dot = document.createElement('div');
+  dot.className = 'cal-marker';
+  dot.style.left = px + 'px';
+  dot.style.top = py + 'px';
+  wrapper.appendChild(dot);
+
+  const label = document.createElement('div');
+  label.className = 'cal-label';
+  label.style.left = px + 'px';
+  label.style.top = py + 'px';
+  label.textContent = name;
+  label.dataset.calName = name;
+  wrapper.appendChild(label);
+
+  pendingX = null;
+  pendingY = null;
+  currentIdx++;
+  updateUI();
+}
+
+function skipLocation() {
+  clearPending();
+  currentIdx++;
+  updateUI();
+}
+
+function undoLast() {
+  if (currentIdx === 0 && Object.keys(calibrated).length === 0) return;
+  clearPending();
+  currentIdx = Math.max(0, currentIdx - 1);
+  const name = LOCATIONS[currentIdx];
+  delete calibrated[name];
+  // Remove marker and label
+  document.querySelectorAll(`[data-cal-name="${name}"]`).forEach(el => {
+    // Also remove the dot before it
+    if (el.previousElementSibling && el.previousElementSibling.classList.contains('cal-marker')) {
+      el.previousElementSibling.remove();
+    }
+    el.remove();
+  });
+  updateUI();
+}
+
+function showOutput() {
+  document.getElementById('location-name').textContent = 'All done!';
+  document.getElementById('instructions').textContent = '';
+  document.getElementById('progress').textContent = `${Object.keys(calibrated).length} locations calibrated`;
+
+  let output = '';
+  for (const [name, coords] of Object.entries(calibrated)) {
+    output += `${name}: x: ${coords.x}, y: ${coords.y}\n`;
+  }
+
+  document.getElementById('output-text').value = output;
+  document.getElementById('output-overlay').style.display = 'block';
+}
+
+// ─── Zoom & Pan ───
+
+function applyTransform() {
+  document.getElementById('map-wrapper').style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
+function clampPan() {
+  const container = document.getElementById('map-area');
+  const img = document.getElementById('map-img');
+  const cW = container.clientWidth, cH = container.clientHeight;
+  const imgW = img.clientWidth * scale, imgH = img.clientHeight * scale;
+  const imgLeft = (container.clientWidth - img.clientWidth) / 2;
+  const imgTop = (container.clientHeight - img.clientHeight) / 2;
+  if (imgW <= cW) { panX = 0; } else {
+    panX = Math.max(Math.min(panX, -imgLeft * (scale - 1)), -(imgLeft * (scale - 1) + (imgW - cW)));
+  }
+  if (imgH <= cH) { panY = 0; } else {
+    panY = Math.max(Math.min(panY, -imgTop * (scale - 1)), -(imgTop * (scale - 1) + (imgH - cH)));
+  }
+}
+
+function zoomAt(newScale, cx, cy) {
+  const container = document.getElementById('map-area');
+  const cr = container.getBoundingClientRect();
+  const lx = (cx !== undefined ? cx - cr.left : cr.width / 2);
+  const ly = (cy !== undefined ? cy - cr.top : cr.height / 2);
+  const wx = (lx - panX) / scale;
+  const wy = (ly - panY) / scale;
+  scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+  panX = lx - wx * scale;
+  panY = ly - wy * scale;
+  clampPan();
+  applyTransform();
+}
+
+const area = document.getElementById('map-area');
+
+area.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  zoomAt(scale * (e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY);
+}, { passive: false });
+
+area.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  isPanning = true; didPan = false;
+  panStartX = e.clientX; panStartY = e.clientY;
+  panStartPanX = panX; panStartPanY = panY;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  const dx = e.clientX - panStartX, dy = e.clientY - panStartY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
+  if (didPan) {
+    panX = panStartPanX + dx; panY = panStartPanY + dy;
+    clampPan(); applyTransform();
+  }
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!isPanning) return;
+  isPanning = false;
+  if (!didPan) handleClick(e);
+});
+
+function handleClick(e) {
+  const img = document.getElementById('map-img');
+  const r = img.getBoundingClientRect();
+  const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  if (cx < 0 || cy < 0 || cx > r.width || cy > r.height) return;
+  const pctX = (cx / r.width) * 100;
+  const pctY = (cy / r.height) * 100;
+  placePending(pctX, pctY);
+}
+
+// Touch
+let lastTouchDist = 0;
+area.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist = Math.sqrt(dx*dx + dy*dy);
+  } else if (e.touches.length === 1) {
+    isPanning = true; didPan = false;
+    panStartX = e.touches[0].clientX; panStartY = e.touches[0].clientY;
+    panStartPanX = panX; panStartPanY = panY;
+  }
+}, { passive: false });
+
+area.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    if (lastTouchDist > 0) zoomAt(scale * (dist / lastTouchDist), cx, cy);
+    lastTouchDist = dist;
+  } else if (e.touches.length === 1 && isPanning) {
+    const dx = e.touches[0].clientX - panStartX;
+    const dy = e.touches[0].clientY - panStartY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
+    if (didPan) {
+      e.preventDefault();
+      panX = panStartPanX + dx; panY = panStartPanY + dy;
+      clampPan(); applyTransform();
+    }
+  }
+}, { passive: false });
+
+area.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) lastTouchDist = 0;
+  if (e.touches.length === 0 && isPanning && !didPan) handleClick(e.changedTouches[0]);
+  if (e.touches.length === 0) isPanning = false;
+});
+
+updateUI();
+</script>
+</body>
+</html>

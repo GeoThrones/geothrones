@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoThrones</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #1a1a2e;
+      color: #e0d5c1;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Start Screen ── */
+    #start-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: radial-gradient(ellipse at center, #2a1a1a 0%, #0d0d1a 70%);
+    }
+
+    #start-screen h1 {
+      font-size: 4rem;
+      color: #c9a84c;
+      text-shadow: 0 0 20px rgba(201, 168, 76, 0.4);
+      letter-spacing: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    #start-screen .subtitle {
+      font-size: 1.1rem;
+      color: #8a7a6a;
+      margin-bottom: 3rem;
+      font-style: italic;
+    }
+
+    .btn {
+      padding: 14px 48px;
+      font-size: 1.2rem;
+      font-family: Georgia, serif;
+      background: linear-gradient(135deg, #c9a84c, #a8872a);
+      color: #1a1a2e;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: all 0.3s;
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, #dfc06a, #c9a84c);
+      transform: scale(1.05);
+    }
+
+    /* ── Game Screen ── */
+    #game-screen {
+      display: none;
+      position: relative;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #map-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      cursor: crosshair;
+      background: #0d0d1a;
+    }
+
+    #map-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: 0 0;
+    }
+
+    #map-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+    }
+
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: #111122;
+      border-bottom: 2px solid #c9a84c33;
+      min-height: 56px;
+    }
+
+    #round-info {
+      font-size: 1rem;
+      color: #c9a84c;
+      letter-spacing: 2px;
+    }
+
+    #score-display {
+      font-size: 1rem;
+      color: #c9a84c;
+      letter-spacing: 2px;
+    }
+
+    #prompt-bar {
+      position: absolute;
+      top: 56px;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      padding: 16px 24px;
+      background: #16162aee;
+      border-bottom: 1px solid #c9a84c22;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #prompt-text {
+      font-size: 1.15rem;
+      line-height: 1.5;
+      color: #e0d5c1;
+      max-width: 800px;
+      font-style: italic;
+    }
+
+    .marker {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .marker.guess {
+      background: #e74c3c;
+      border: 1.5px solid #fff;
+      box-shadow: 0 0 6px rgba(231, 76, 60, 0.6);
+    }
+
+    .marker.answer {
+      background: #2ecc71;
+      border: 1.5px solid #fff;
+      box-shadow: 0 0 6px rgba(46, 204, 113, 0.6);
+    }
+
+    .marker-label {
+      position: absolute;
+      transform: translate(12px, -50%);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-shadow: 0 0 4px #000, 0 0 4px #000;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    .distance-line {
+      position: absolute;
+      pointer-events: none;
+      z-index: 9;
+      height: 2px;
+      background: repeating-linear-gradient(
+        90deg, #fff 0, #fff 6px, transparent 6px, transparent 12px
+      );
+      transform-origin: 0 50%;
+    }
+
+    #submit-btn {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      z-index: 40;
+      padding: 12px 36px;
+      font-size: 1rem;
+      display: none;
+    }
+
+    #zoom-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      z-index: 35;
+      font-size: 0.75rem;
+      color: #c9a84c88;
+      background: #111122aa;
+      padding: 6px 12px;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    /* ── Result Overlay ── */
+    #result-overlay {
+      display: none;
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111122ee;
+      border: 1px solid #c9a84c44;
+      padding: 20px 40px;
+      text-align: center;
+      z-index: 40;
+      min-width: 300px;
+    }
+
+    #result-overlay .result-score {
+      font-size: 2.5rem;
+      color: #c9a84c;
+      font-weight: bold;
+    }
+
+    #result-overlay .result-distance {
+      font-size: 1rem;
+      color: #8a7a6a;
+      margin: 8px 0 16px;
+    }
+
+    /* ── Summary Screen ── */
+    #summary-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: radial-gradient(ellipse at center, #2a1a1a 0%, #0d0d1a 70%);
+    }
+
+    #summary-screen h2 {
+      font-size: 2.5rem;
+      color: #c9a84c;
+      margin-bottom: 0.5rem;
+    }
+
+    #final-score {
+      font-size: 4rem;
+      color: #c9a84c;
+      text-shadow: 0 0 30px rgba(201, 168, 76, 0.4);
+      margin-bottom: 0.5rem;
+    }
+
+    #final-score-label {
+      color: #8a7a6a;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    #round-breakdown {
+      list-style: none;
+      margin-bottom: 2rem;
+      width: 400px;
+      max-width: 90vw;
+    }
+
+    #round-breakdown li {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #c9a84c22;
+      font-size: 0.95rem;
+    }
+
+    #round-breakdown li .rb-location { color: #8a7a6a; }
+    #round-breakdown li .rb-score { color: #c9a84c; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div id="start-screen">
+    <h1>GEOTHRONES</h1>
+    <p class="subtitle">How well do you know the history of Westeros?</p>
+    <button class="btn" onclick="startGame()">PLAY</button>
+  </div>
+
+  <div id="game-screen">
+    <div id="top-bar">
+      <div id="round-info">ROUND 1 / 5</div>
+      <div id="score-display">SCORE: 0</div>
+    </div>
+    <div id="prompt-bar">
+      <p id="prompt-text"></p>
+    </div>
+    <div id="map-container">
+      <div id="map-wrapper">
+        <img id="map-img" src="map.jpg" alt="Map of Westeros" draggable="false">
+      </div>
+      <div id="zoom-hint">Scroll to zoom &middot; Drag to pan</div>
+    </div>
+    <button id="submit-btn" class="btn" onclick="submitGuess()">SUBMIT</button>
+    <div id="result-overlay">
+      <div class="result-score" id="result-score-text"></div>
+      <div class="result-distance" id="result-distance-text"></div>
+      <button class="btn" onclick="nextRound()">NEXT</button>
+    </div>
+  </div>
+
+  <div id="summary-screen">
+    <h2>GAME OVER</h2>
+    <div id="final-score"></div>
+    <div id="final-score-label">out of 500</div>
+    <ul id="round-breakdown"></ul>
+    <button class="btn" onclick="startGame()">PLAY AGAIN</button>
+  </div>
+
+<script>
+// ─── Question Bank ───
+// x,y are percentages of the map image (0-100).
+const ALL_QUESTIONS = [
+  {
+    prompt: "Eddard Stark was executed on the steps of the Great Sept of Baelor in this capital city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "The Red Wedding, where Robb Stark was murdered by the Freys, took place at this castle in 299 AC.",
+    answer: "The Twins",
+    x: 20.2, y: 39.6
+  },
+  {
+    prompt: "Jon Snow was elected the 998th Lord Commander of the Night's Watch at this ancient fortress.",
+    answer: "Castle Black",
+    x: 25.2, y: 6.8
+  },
+  {
+    prompt: "Daenerys Targaryen hatched three dragon eggs on a funeral pyre in the Dothraki Sea near this region.",
+    answer: "Vaes Dothrak",
+    x: 73.1, y: 53.0
+  },
+  {
+    prompt: "Theon Greyjoy captured this northern castle, ancestral seat of House Stark, in a surprise raid.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Tyrion Lannister used wildfire to destroy Stannis Baratheon's fleet in a great naval battle at this bay.",
+    answer: "Blackwater Bay",
+    x: 29.4, y: 55.4
+  },
+  {
+    prompt: "The Wall, a 700-foot structure of ice, was breached by the Night King's dragon near this castle.",
+    answer: "Eastwatch-by-the-Sea",
+    x: 27.2, y: 6.8
+  },
+  {
+    prompt: "Oberyn Martell, the Red Viper, fought the Mountain in a trial by combat in this city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Stannis Baratheon burned his daughter Shireen as a sacrifice before marching on this northern stronghold.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Arya Stark trained with the Faceless Men at the House of Black and White in this Free City.",
+    answer: "Braavos",
+    x: 38.8, y: 38.1
+  },
+  {
+    prompt: "Daenerys Targaryen conquered a great slave city and ruled from its Great Pyramid.",
+    answer: "Meereen",
+    x: 72.8, y: 71.0
+  },
+  {
+    prompt: "Robert Baratheon killed Rhaegar Targaryen in single combat at this river crossing during his rebellion.",
+    answer: "The Trident",
+    x: 23.4, y: 46.8
+  },
+  {
+    prompt: "Jaime Lannister pushed Bran Stark from a tower after Bran discovered his secret at this castle.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "The Iron Islands, ruled by House Greyjoy, launched their failed rebellion from this island fortress.",
+    answer: "Pyke",
+    x: 13.2, y: 44.2
+  },
+  {
+    prompt: "Cersei Lannister destroyed the Great Sept with wildfire, killing the High Sparrow and the Tyrells, in this city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Renly Baratheon was assassinated by a shadow creature in his camp near this seat of House Baratheon.",
+    answer: "Storm's End",
+    x: 29.3, y: 64.0
+  },
+  {
+    prompt: "Samwell Tarly discovered key information about dragonglass while studying at this great citadel.",
+    answer: "Oldtown",
+    x: 12.7, y: 72.6
+  },
+  {
+    prompt: "The Unsullied were purchased and freed by Daenerys Targaryen in this slave-trading city of Slaver's Bay.",
+    answer: "Astapor",
+    x: 70.5, y: 80.2
+  },
+  {
+    prompt: "Lysa Arryn ruled the Vale from this mountaintop castle, where she kept her son Robin.",
+    answer: "The Eyrie",
+    x: 28.1, y: 43.1
+  },
+  {
+    prompt: "The great tourney where Rhaegar Targaryen crowned Lyanna Stark the Queen of Love and Beauty took place at this castle.",
+    answer: "Harrenhal",
+    x: 23.5, y: 49.3
+  },
+  // ── Game of Thrones (additional) ──
+  {
+    prompt: "Daenerys Targaryen received three dragon eggs as a wedding gift from Illyrio Mopatis in this Free City.",
+    answer: "Pentos",
+    x: 39.3, y: 56.3
+  },
+  {
+    prompt: "Jon Snow was stabbed by his brothers of the Night's Watch at this fortress along the Wall.",
+    answer: "Castle Black",
+    x: 25.2, y: 6.8
+  },
+  {
+    prompt: "Catelyn Stark arrested Tyrion Lannister at the crossroads inn and brought him to this mountaintop castle for trial.",
+    answer: "The Eyrie",
+    x: 28.1, y: 43.1
+  },
+  {
+    prompt: "Stannis Baratheon's fleet was destroyed by wildfire during the Battle of the Blackwater at this bay.",
+    answer: "Blackwater Bay",
+    x: 29.4, y: 55.4
+  },
+  {
+    prompt: "Daenerys locked away two of her dragons in the catacombs beneath the Great Pyramid in this city.",
+    answer: "Meereen",
+    x: 72.8, y: 71.0
+  },
+  {
+    prompt: "Robb Stark was crowned King in the North by his bannermen at this ancestral seat.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Brienne of Tarth defeated the Hound in single combat near this mountaintop castle in the Vale.",
+    answer: "The Eyrie",
+    x: 28.1, y: 43.1
+  },
+  {
+    prompt: "Daenerys crucified 163 masters after conquering this slave city as justice for the slave children.",
+    answer: "Meereen",
+    x: 72.8, y: 71.0
+  },
+  {
+    prompt: "Melisandre gave birth to a shadow assassin beneath this ancestral seat of House Baratheon.",
+    answer: "Storm's End",
+    x: 29.3, y: 64.0
+  },
+  {
+    prompt: "Tywin Lannister was killed by his son Tyrion with a crossbow in this city's Red Keep.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "The Night King raised the dead at this frozen lake beyond the Wall after killing Viserion.",
+    answer: "Eastwatch-by-the-Sea",
+    x: 27.2, y: 6.8
+  },
+  {
+    prompt: "Theon Greyjoy returned home to this island fortress to rally the Iron Fleet for his father.",
+    answer: "Pyke",
+    x: 13.2, y: 44.2
+  },
+  {
+    prompt: "Edmure Tully surrendered this castle to Jaime Lannister during the siege in Season 6.",
+    answer: "Riverrun",
+    x: 19.3, y: 47.5
+  },
+  {
+    prompt: "Joffrey Baratheon was poisoned at his own wedding feast in this city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "The Dothraki khalasar burned the Temple of the Dosh Khaleen in this sacred Dothraki city.",
+    answer: "Vaes Dothrak",
+    x: 73.1, y: 53.0
+  },
+  {
+    prompt: "Arya Stark killed Walder Frey and his sons as revenge for the Red Wedding at this castle.",
+    answer: "The Twins",
+    x: 20.2, y: 39.6
+  },
+  {
+    prompt: "Daenerys Targaryen sailed to this island fortress, the ancestral seat of her family, in Season 7.",
+    answer: "Dragonstone",
+    x: 31.2, y: 52.3
+  },
+  {
+    prompt: "The Battle of the Bastards was fought outside the walls of this northern castle.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Bran Stark was declared King of the Six Kingdoms in the dragonpit of this capital city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Jaime Lannister lost his hand while being transported as a prisoner through the Riverlands near this river.",
+    answer: "The Trident",
+    x: 23.4, y: 46.8
+  },
+  {
+    prompt: "Drogon destroyed the Iron Throne after Daenerys was killed in this city's throne room.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Sansa Stark was married to Ramsay Bolton at this northern stronghold.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Olenna Tyrell confessed to poisoning Joffrey as Jaime Lannister took this seat of House Tyrell.",
+    answer: "Highgarden",
+    x: 16.2, y: 66.6
+  },
+  {
+    prompt: "The Lannister army was ambushed by Daenerys and Drogon on the Roseroad returning from this castle.",
+    answer: "Highgarden",
+    x: 16.2, y: 66.6
+  },
+  {
+    prompt: "Oberyn Martell arrived from this southern capital to attend Joffrey's wedding and seek justice.",
+    answer: "Sunspear",
+    x: 31.8, y: 77.8
+  },
+  {
+    prompt: "Myrcella Baratheon was poisoned by the Sand Snakes as she departed this kingdom.",
+    answer: "Sunspear",
+    x: 31.8, y: 77.8
+  },
+  {
+    prompt: "The Night King and the Army of the Dead were defeated in the Battle of Winterfell at this castle.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Tyrion Lannister served as Hand of the King and organized the defense of this city against Stannis.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Euron Greyjoy ambushed Yara's fleet in the waters near this island fortress.",
+    answer: "Dragonstone",
+    x: 31.2, y: 52.3
+  },
+  // ── House of the Dragon ──
+  {
+    prompt: "Princess Rhaenyra Targaryen was crowned Queen on the Painted Table at this island fortress.",
+    answer: "Dragonstone",
+    x: 31.2, y: 52.3
+  },
+  {
+    prompt: "Aegon II Targaryen was crowned king in the Great Sept by the Greens, sparking the Dance of the Dragons.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Prince Aemond killed Luke Velaryon and his dragon Arrax in a storm above this castle.",
+    answer: "Storm's End",
+    x: 29.3, y: 64.0
+  },
+  {
+    prompt: "Prince Daemon Targaryen claimed the Stepstones and was briefly crowned King of the Narrow Sea at these islands.",
+    answer: "The Stepstones",
+    x: 35.1, y: 73.2
+  },
+  {
+    prompt: "Daemon Targaryen spent months haunted by visions in the godswood of this massive ruined castle.",
+    answer: "Harrenhal",
+    x: 23.5, y: 49.3
+  },
+  {
+    prompt: "Laena Velaryon chose dragonfire over a painful death in childbirth in this Free City across the Narrow Sea.",
+    answer: "Pentos",
+    x: 39.3, y: 56.3
+  },
+  {
+    prompt: "Blood and Cheese murdered Prince Jaehaerys in the Red Keep of this city on Daemon's orders.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Rhaenyra Targaryen grew up as the Realm's Delight in the court of this capital city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Ser Criston Cole killed Lord Beesbury and helped crown Aegon II at the Green Council in this city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Rhaenys Targaryen burst through the floor of the Dragonpit on Meleys during Aegon's coronation in this city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Rhaenys and Meleys were killed by Vhagar and Sunfyre during the Battle at this Crownlands castle.",
+    answer: "Rook's Rest",
+    x: 29.0, y: 51.5
+  },
+  {
+    prompt: "Corlys Velaryon, the Sea Snake, ruled as Lord of the Tides from this island seat of House Velaryon.",
+    answer: "Driftmark",
+    x: 31.0, y: 52.7
+  },
+  {
+    prompt: "King Viserys I made the lords of the realm swear fealty to Rhaenyra as heir at this capital.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Jacaerys Velaryon flew to this northern castle to secure the Starks' allegiance for the Blacks.",
+    answer: "Winterfell",
+    x: 21.4, y: 20.4
+  },
+  {
+    prompt: "Prince Aegon Targaryen was found hiding in a pleasure house in the Street of Silk in this city.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  {
+    prompt: "Daemon Targaryen won the tourney celebrating Viserys's heir by defeating Ser Criston Cole at this capital.",
+    answer: "King's Landing",
+    x: 27.4, y: 55.7
+  },
+  // ── A Knight of the Seven Kingdoms ──
+  {
+    prompt: "Ser Duncan the Tall entered a fateful tourney as a mystery knight at this castle in the Reach.",
+    answer: "Ashford",
+    x: 20.3, y: 65.7
+  },
+  {
+    prompt: "Dunk first met the young Prince Aegon Targaryen, known as Egg, near this town before the tourney.",
+    answer: "Ashford",
+    x: 20.3, y: 65.7
+  },
+  {
+    prompt: "Ser Arlan of Pennytree, Dunk's master, died on the road heading to a tourney in the Reach near this town.",
+    answer: "Ashford",
+    x: 20.3, y: 65.7
+  },
+  {
+    prompt: "Prince Baelor Breakspear died from wounds suffered in the Trial of Seven at this castle's tourney.",
+    answer: "Ashford",
+    x: 20.3, y: 65.7
+  },
+  {
+    prompt: "Prince Maekar Targaryen accidentally killed his brother Baelor during the trial by combat at this tourney ground.",
+    answer: "Ashford",
+    x: 20.3, y: 65.7
+  },
+];
+
+// ─── Game State ───
+const ROUNDS_PER_GAME = 5;
+const MAP_MILES_DIAGONAL = 4000;
+
+let currentRound = 0;
+let totalScore = 0;
+let roundResults = [];
+let questions = [];
+let guessX = null;
+let guessY = null;
+let hasGuessed = false;
+
+// ─── Zoom & Pan State ───
+let scale = 1;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panStartPanX = 0;
+let panStartPanY = 0;
+let didPan = false;
+const MIN_SCALE = 1;
+const MAX_SCALE = 6;
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startGame() {
+  currentRound = 0;
+  totalScore = 0;
+  roundResults = [];
+  questions = shuffle([...ALL_QUESTIONS]).slice(0, ROUNDS_PER_GAME);
+
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('summary-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+
+  resetZoom();
+  loadRound();
+}
+
+function loadRound() {
+  const q = questions[currentRound];
+  document.getElementById('round-info').textContent = `ROUND ${currentRound + 1} / ${ROUNDS_PER_GAME}`;
+  document.getElementById('score-display').textContent = `SCORE: ${totalScore}`;
+  document.getElementById('prompt-text').textContent = q.prompt;
+
+  clearMarkers();
+  document.getElementById('result-overlay').style.display = 'none';
+  document.getElementById('submit-btn').style.display = 'none';
+
+  guessX = null;
+  guessY = null;
+  hasGuessed = false;
+  resetZoom();
+  showHint();
+}
+
+// ─── Zoom & Pan ───
+
+function applyTransform() {
+  const wrapper = document.getElementById('map-wrapper');
+  wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
+function clampPan() {
+  const container = document.getElementById('map-container');
+  const cRect = container.getBoundingClientRect();
+  const img = document.getElementById('map-img');
+  const imgW = img.clientWidth * scale;
+  const imgH = img.clientHeight * scale;
+
+  const wrapperW = container.clientWidth * scale;
+  const wrapperH = container.clientHeight * scale;
+
+  if (imgW <= cRect.width) {
+    panX = 0;
+  } else {
+    const imgLeft = (container.clientWidth - img.clientWidth) / 2;
+    const minX = -(imgLeft * scale + imgW - cRect.width);
+    const maxX = -imgLeft * scale + (imgLeft * scale);
+    panX = Math.max(Math.min(panX, -imgLeft * (scale - 1)), -(imgLeft * (scale - 1) + (imgW - cRect.width)));
+  }
+
+  if (imgH <= cRect.height) {
+    panY = 0;
+  } else {
+    const imgTop = (container.clientHeight - img.clientHeight) / 2;
+    panY = Math.max(Math.min(panY, -imgTop * (scale - 1)), -(imgTop * (scale - 1) + (imgH - cRect.height)));
+  }
+}
+
+function zoomAt(newScale, centerX, centerY) {
+  const container = document.getElementById('map-container');
+  const cRect = container.getBoundingClientRect();
+
+  const cx = centerX !== undefined ? centerX - cRect.left : cRect.width / 2;
+  const cy = centerY !== undefined ? centerY - cRect.top : cRect.height / 2;
+
+  const worldX = (cx - panX) / scale;
+  const worldY = (cy - panY) / scale;
+
+  scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+  panX = cx - worldX * scale;
+  panY = cy - worldY * scale;
+
+  clampPan();
+  applyTransform();
+  hideHint();
+}
+
+function resetZoom() {
+  scale = 1;
+  panX = 0;
+  panY = 0;
+  applyTransform();
+}
+
+function hideHint() {
+  const hint = document.getElementById('zoom-hint');
+  if (hint) hint.style.opacity = '0';
+}
+
+function showHint() {
+  const hint = document.getElementById('zoom-hint');
+  if (hint) hint.style.opacity = '1';
+}
+
+// ─── Event Handlers ───
+
+const container = document.getElementById('map-container');
+
+container.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  zoomAt(scale * factor, e.clientX, e.clientY);
+}, { passive: false });
+
+container.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  isPanning = true;
+  didPan = false;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panStartPanX = panX;
+  panStartPanY = panY;
+  container.style.cursor = scale > 1 ? 'grabbing' : 'crosshair';
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  const dx = e.clientX - panStartX;
+  const dy = e.clientY - panStartY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
+  if (didPan) {
+    panX = panStartPanX + dx;
+    panY = panStartPanY + dy;
+    clampPan();
+    applyTransform();
+  }
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!isPanning) return;
+  isPanning = false;
+  container.style.cursor = 'crosshair';
+
+  if (!didPan) {
+    handleMapClick(e);
+  }
+});
+
+// Touch support
+let lastTouchDist = 0;
+let lastTouchCenter = null;
+
+container.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    lastTouchCenter = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+    };
+  } else if (e.touches.length === 1) {
+    isPanning = true;
+    didPan = false;
+    panStartX = e.touches[0].clientX;
+    panStartY = e.touches[0].clientY;
+    panStartPanX = panX;
+    panStartPanY = panY;
+  }
+}, { passive: false });
+
+container.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    if (lastTouchDist > 0) {
+      zoomAt(scale * (dist / lastTouchDist), cx, cy);
+    }
+    lastTouchDist = dist;
+  } else if (e.touches.length === 1 && isPanning) {
+    const dx = e.touches[0].clientX - panStartX;
+    const dy = e.touches[0].clientY - panStartY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
+    if (didPan) {
+      e.preventDefault();
+      panX = panStartPanX + dx;
+      panY = panStartPanY + dy;
+      clampPan();
+      applyTransform();
+    }
+  }
+}, { passive: false });
+
+container.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) {
+    lastTouchDist = 0;
+    lastTouchCenter = null;
+  }
+  if (e.touches.length === 0 && isPanning && !didPan) {
+    const touch = e.changedTouches[0];
+    handleMapClick(touch);
+  }
+  if (e.touches.length === 0) isPanning = false;
+});
+
+function handleMapClick(e) {
+  if (hasGuessed) return;
+
+  const img = document.getElementById('map-img');
+  const imgRect = img.getBoundingClientRect();
+
+  const clickX = e.clientX - imgRect.left;
+  const clickY = e.clientY - imgRect.top;
+
+  if (clickX < 0 || clickY < 0 || clickX > imgRect.width || clickY > imgRect.height) return;
+
+  guessX = (clickX / imgRect.width) * 100;
+  guessY = (clickY / imgRect.height) * 100;
+
+  clearMarkers();
+  placeMarkerOnMap(guessX, guessY, 'guess');
+  document.getElementById('submit-btn').style.display = 'block';
+}
+
+function placeMarkerOnMap(pctX, pctY, className, labelText) {
+  const wrapper = document.getElementById('map-wrapper');
+  const img = document.getElementById('map-img');
+
+  const imgOffsetX = (wrapper.clientWidth - img.clientWidth) / 2;
+  const imgOffsetY = (wrapper.clientHeight - img.clientHeight) / 2;
+
+  const pixelX = imgOffsetX + (pctX / 100) * img.clientWidth;
+  const pixelY = imgOffsetY + (pctY / 100) * img.clientHeight;
+
+  const marker = document.createElement('div');
+  marker.className = `marker ${className}`;
+  marker.style.left = `${pixelX}px`;
+  marker.style.top = `${pixelY}px`;
+  wrapper.appendChild(marker);
+
+  if (labelText) {
+    const label = document.createElement('div');
+    label.className = 'marker-label';
+    label.style.left = `${pixelX}px`;
+    label.style.top = `${pixelY}px`;
+    label.textContent = labelText;
+    wrapper.appendChild(label);
+  }
+
+  return { x: pixelX, y: pixelY };
+}
+
+function drawLine(x1, y1, x2, y2) {
+  const wrapper = document.getElementById('map-wrapper');
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  const line = document.createElement('div');
+  line.className = 'distance-line';
+  line.style.left = `${x1}px`;
+  line.style.top = `${y1}px`;
+  line.style.width = `${dist}px`;
+  line.style.transform = `rotate(${angle}deg)`;
+  wrapper.appendChild(line);
+}
+
+function submitGuess() {
+  if (guessX === null || hasGuessed) return;
+  hasGuessed = true;
+
+  const q = questions[currentRound];
+
+  const guessPos = { };
+  const img = document.getElementById('map-img');
+  const wrapper = document.getElementById('map-wrapper');
+  const imgOffsetX = (wrapper.clientWidth - img.clientWidth) / 2;
+  const imgOffsetY = (wrapper.clientHeight - img.clientHeight) / 2;
+  guessPos.x = imgOffsetX + (guessX / 100) * img.clientWidth;
+  guessPos.y = imgOffsetY + (guessY / 100) * img.clientHeight;
+
+  const ansPos = placeMarkerOnMap(q.x, q.y, 'answer', q.answer);
+  drawLine(guessPos.x, guessPos.y, ansPos.x, ansPos.y);
+
+  const pctDist = Math.sqrt(
+    Math.pow(guessX - q.x, 2) + Math.pow(guessY - q.y, 2)
+  );
+  const imgDiag = Math.sqrt(100 * 100 + 100 * 100);
+  const miles = Math.round((pctDist / imgDiag) * MAP_MILES_DIAGONAL);
+
+  const score = Math.max(0, Math.round(100 * (1 - miles / 2000)));
+
+  totalScore += score;
+  roundResults.push({ location: q.answer, score, miles });
+
+  document.getElementById('submit-btn').style.display = 'none';
+  document.getElementById('score-display').textContent = `SCORE: ${totalScore}`;
+  document.getElementById('result-score-text').textContent = `${score} pts`;
+  document.getElementById('result-distance-text').textContent = `${miles} miles away — ${q.answer}`;
+  document.getElementById('result-overlay').style.display = 'block';
+}
+
+function nextRound() {
+  currentRound++;
+  if (currentRound >= ROUNDS_PER_GAME) {
+    showSummary();
+  } else {
+    loadRound();
+  }
+}
+
+function showSummary() {
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('summary-screen').style.display = 'flex';
+  document.getElementById('final-score').textContent = totalScore;
+
+  const list = document.getElementById('round-breakdown');
+  list.innerHTML = '';
+  roundResults.forEach((r, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span class="rb-location">Round ${i + 1}: ${r.location} (${r.miles} mi)</span>
+      <span class="rb-score">${r.score} pts</span>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function clearMarkers() {
+  const wrapper = document.getElementById('map-wrapper');
+  wrapper.querySelectorAll('.marker, .distance-line, .marker-label').forEach(el => el.remove());
+}
+</script>
+</body>
+</html>
